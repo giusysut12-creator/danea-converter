@@ -275,16 +275,19 @@
         Impostazioni
       </h2>
       <button class="tog-btn" id="settBtn" onclick="toggleSett()">
-        Mostra <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        Nascondi <svg viewBox="0 0 24 24" fill="currentColor" style="transform:rotate(180deg)"><path d="M7 10l5 5 5-5z"/></svg>
       </button>
     </div>
-    <div class="card-bd" id="settBody" style="display:none">
+    <div class="card-bd" id="settBody">
       <div class="grid2">
         <div class="field span2">
           <label>🔑 API Key Anthropic (Claude)</label>
-          <input type="password" id="apiKey" placeholder="sk-ant-api03-…" autocomplete="off" />
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="apiKey" placeholder="sk-ant-api03-…" autocomplete="off" style="flex:1;font-family:monospace;font-size:.82rem" />
+            <span id="keySaved" style="display:none;color:var(--green);font-size:.8rem;font-weight:600;white-space:nowrap">✓ Salvata</span>
+          </div>
           <div class="hint">
-            Necessaria per l'analisi AI del PDF. Rimane nel browser, non viene inviata a server terzi.
+            Salvata nel browser — non serve reinserirla ogni volta.
             <a href="https://console.anthropic.com/" target="_blank">Ottieni una chiave →</a>
           </div>
         </div>
@@ -390,8 +393,15 @@ const SKEYS = ['apiKey','fornitore','produttore','codIva'];
 SKEYS.forEach(k => {
   const el = document.getElementById(k);
   const v  = localStorage.getItem('dc_'+k);
-  if (v) el.value = v;
-  el.addEventListener('input', () => localStorage.setItem('dc_'+k, el.value));
+  if (v) { el.value = v; if (k === 'apiKey') showKeySaved(); }
+  ['input','change','paste'].forEach(evt =>
+    el.addEventListener(evt, () => {
+      setTimeout(() => {   // wait for paste to complete
+        localStorage.setItem('dc_'+k, el.value);
+        if (k === 'apiKey' && el.value) showKeySaved();
+      }, 50);
+    })
+  );
 });
 const piEl = document.getElementById('prezziIvati');
 if (localStorage.getItem('dc_pi') === '1') piEl.checked = true;
@@ -400,6 +410,16 @@ piEl.addEventListener('change', () => {
   document.getElementById('togLbl').textContent =
     piEl.checked ? 'Inclusi IVA' : 'Esclusi IVA (verrà applicato ×1.22)';
 });
+
+// Auto-open settings if no API key saved yet
+if (!localStorage.getItem('dc_apiKey')) {
+  document.getElementById('settBody').style.display = '';
+}
+
+function showKeySaved() {
+  const el = document.getElementById('keySaved');
+  if (el) { el.style.display = 'inline'; }
+}
 
 // ═══════════════════════════════════════════
 // UI HELPERS
