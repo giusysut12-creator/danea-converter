@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bolla PDF → Danea Excel</title>
+
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- SheetJS con stili -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue:      #2563EB;
+      --blue-dk:   #1D4ED8;
+      --blue-bg:   #EFF6FF;
+      --green:     #16A34A;
+      --green-bg:  #F0FDF4;
+      --red:       #DC2626;
+      --red-bg:    #FEF2F2;
+      --gray-50:   #F8FAFC;
+      --gray-100:  #F1F5F9;
+      --gray-200:  #E2E8F0;
+      --gray-400:  #94A3B8;
+      --gray-600:  #475569;
+      --gray-700:  #334155;
+      --gray-900:  #0F172A;
+      --r: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    /* ── Header ── */
+    header {
+      background: #fff;
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo {
+      width: 36px; height: 36px;
+      background: var(--blue);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo svg { width: 20px; height: 20px; fill: #fff; }
+    header h1 { font-size: 1.1rem; font-weight: 700; }
+    header .sub { font-size: .78rem; color: var(--gray-400); margin-left: 4px; font-weight: 400; }
+    .badge {
+      margin-left: auto;
+      font-size: .7rem; font-weight: 600;
+      background: #EFF6FF; color: var(--blue);
+      padding: 4px 10px; border-radius: 99px;
+      border: 1px solid #BFDBFE;
+    }
+    /* ── Main ── */
+    main {
+      flex: 1;
+      max-width: 780px; width: 100%;
+      margin: 36px auto;
+      padding: 0 16px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-hd {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-hd h2 {
+      font-size: .88rem; font-weight: 600; color: var(--gray-700);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-hd h2 svg { width: 15px; height: 15px; }
+    .card-bd { padding: 24px; }
+    /* ── Fields ── */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width:520px) { .grid2 { grid-template-columns: 1fr; } }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field.span2 { grid-column: 1/-1; }
+    label { font-size: .72rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: .05em; }
+    input[type=text],input[type=password] {
+      padding: 9px 12px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: .88rem;
+      font-family: inherit;
+      color: var(--gray-900);
+      transition: border-color .15s;
+    }
+    input:focus { outline: none; border-color: var(--blue); }
+    .hint { font-size: .7rem; color: var(--gray-400); }
+    .hint a { color: var(--blue); }
+    /* toggle */
+    .tog-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .tog { position: relative; width: 38px; height: 21px; flex-shrink: 0; }
+    .tog input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0;
+      background: var(--gray-200); border-radius: 99px; cursor: pointer;
+      transition: .2s;
+    }
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 15px; height: 15px;
+      left: 3px; top: 3px;
+      background: #fff; border-radius: 50%;
+      transition: .2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .tog input:checked + .slider { background: var(--blue); }
+    .tog input:checked + .slider::before { transform: translateX(17px); }
+    .tog-lbl { font-size: .83rem; color: var(--gray-700); }
+    /* collapse btn */
+    .tog-btn {
+      font-size: .75rem; color: var(--blue); font-weight: 600;
+      background: none; border: none; cursor: pointer;
+      display: flex; align-items: center; gap: 4px; font-family: inherit;
+    }
+    .tog-btn svg { width: 13px; height: 13px; transition: transform .2s; }
+    .tog-btn.open svg { transform: rotate(180deg); }
+    /* ── Drop Zone ── */
+    #drop {
+      border: 2px dashed var(--gray-200);
+      border-radius: 10px;
+      padding: 44px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    #drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    #drop:hover,#drop.over { border-color: var(--blue); background: var(--blue-bg); }
+    #drop.ok { border-style: solid; border-color: var(--blue); background: var(--blue-bg); }
+    #drop .dico svg { width: 52px; height: 52px; color: var(--gray-300); transition: color .2s; }
+    #drop.ok .dico svg { color: var(--blue); }
+    .dtitle { font-size: .95rem; font-weight: 600; color: var(--gray-700); margin: 10px 0 4px; }
+    .dsub   { font-size: .78rem; color: var(--gray-400); }
+    #fname  { font-size: .84rem; font-weight: 600; color: var(--blue); margin-top: 8px; }
+    /* ── Convert btn ── */
+    #btnConvert {
+      width: 100%; padding: 14px;
+      background: var(--blue); color: #fff;
+      border: none; border-radius: 10px;
+      font-size: .97rem; font-weight: 600; font-family: inherit;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: background .15s, opacity .15s;
+      margin-top: 16px;
+    }
+    #btnConvert:hover:not(:disabled) { background: var(--blue-dk); }
+    #btnConvert:disabled { opacity: .45; cursor: not-allowed; }
+    #btnConvert svg { width: 18px; height: 18px; fill: #fff; }
+    /* ── Status ── */
+    #status { display: none; padding: 20px 24px; }
+    /* spinner */
+    .spin-wrap { display: flex; align-items: center; gap: 14px; }
+    .ring {
+      width: 34px; height: 34px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: rot .8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes rot { to { transform: rotate(360deg); } }
+    .spin-txt strong { display: block; font-size: .97rem; color: var(--gray-900); margin-bottom: 2px; }
+    .spin-txt span   { font-size: .83rem; color: var(--gray-600); }
+    /* progress bar */
+    .prog-bar {
+      width: 100%; height: 4px;
+      background: var(--gray-200); border-radius: 99px;
+      margin-top: 14px; overflow: hidden;
+    }
+    .prog-inner {
+      height: 100%; background: var(--blue); border-radius: 99px;
+      width: 0%; transition: width .4s ease;
+    }
+    /* success */
+    .succ {
+      background: var(--green-bg);
+      border: 1.5px solid #BBF7D0;
+      border-radius: 10px;
+      padding: 20px 24px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .succ-top { display: flex; align-items: center; gap: 12px; }
+    .chk {
+      width: 40px; height: 40px; background: var(--green);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .chk svg { width: 20px; height: 20px; fill: #fff; }
+    .succ-ttl { font-size: .98rem; font-weight: 700; color: var(--green); }
+    .succ-sub { font-size: .8rem; color: var(--gray-600); }
+    /* preview */
+    .prev-lbl { font-size: .72rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--gray-200); }
+    table { width: 100%; border-collapse: collapse; font-size: .76rem; }
+    th { background: var(--gray-100); color: var(--gray-600); font-weight: 600; padding: 7px 10px; text-align: left; white-space: nowrap; }
+    td { padding: 6px 10px; color: var(--gray-700); border-top: 1px solid var(--gray-200); white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+    tr:nth-child(even) td { background: var(--gray-50); }
+    /* download btn */
+    #btnDl {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px; width: 100%;
+      background: var(--green); color: #fff;
+      border: none; border-radius: 10px;
+      font-size: .93rem; font-weight: 600; font-family: inherit;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    #btnDl:hover { background: #15803D; }
+    #btnDl svg { width: 18px; height: 18px; fill: #fff; }
+    /* error */
+    .err {
+      background: var(--red-bg); border: 1.5px solid #FECACA;
+      border-radius: 10px; padding: 16px 20px;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .err svg { width: 20px; height: 20px; fill: var(--red); flex-shrink: 0; margin-top: 1px; }
+    .err-txt { font-size: .86rem; color: var(--red); line-height: 1.5; }
+    .err-txt strong { display: block; margin-bottom: 3px; }
+    /* reset */
+    #btnReset {
+      background: none; border: 1.5px solid var(--gray-200);
+      padding: 8px 16px; border-radius: 8px;
+      font-size: .8rem; font-weight: 600; color: var(--gray-600); cursor: pointer;
+      font-family: inherit; transition: .15s;
+    }
+    #btnReset:hover { border-color: var(--blue); color: var(--blue); }
+    footer { text-align: center; padding: 24px; font-size: .72rem; color: var(--gray-400); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM9 13h6v1.5H9V13zm0 3h4v1.5H9V16zm0-6h2v1.5H9V10z"/></svg>
+  </div>
+  <h1>Bolla PDF → Danea <span class="sub">Excel Converter</span></h1>
+  <span class="badge">✦ Standalone · Nessuna installazione</span>
+</header>
+
+<main>
+
+  <!-- ── Settings ── -->
+  <div class="card">
+    <div class="card-hd">
+      <h2>
+        <svg viewBox="0 0 24 24" fill="var(--gray-400)"><path d="M19.14 12.94a7 7 0 00.06-.94 7 7 0 00-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.26 7.26 0 00-1.62-.94l-.36-2.54a.48.48 0 00-.48-.41h-3.84a.48.48 0 00-.47.41l-.36 2.54a7.26 7.26 0 00-1.62.94l-2.39-.96a.47.47 0 00-.59.22L2.74 9.87a.47.47 0 00.12.61l2.03 1.58a7.2 7.2 0 00-.07.94 7.2 7.2 0 00.07.94l-2.03 1.58a.47.47 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.36 1.05.67 1.62.94l.36 2.54c.06.28.26.41.48.41h3.84c.22 0 .42-.13.47-.41l.36-2.54a7.26 7.26 0 001.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 00-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1112 8.4a3.6 3.6 0 010 7.2z"/></svg>
+        Impostazioni
+      </h2>
+      <button class="tog-btn" id="settBtn" onclick="toggleSett()">
+        Mostra <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+      </button>
+    </div>
+    <div class="card-bd" id="settBody" style="display:none">
+      <div class="grid2">
+        <div class="field span2">
+          <label>🔑 API Key Anthropic (Claude)</label>
+          <input type="password" id="apiKey" placeholder="sk-ant-api03-…" autocomplete="off" />
+          <div class="hint">
+            Necessaria per l'analisi AI del PDF. Rimane nel browser, non viene inviata a server terzi.
+            <a href="https://console.anthropic.com/" target="_blank">Ottieni una chiave →</a>
+          </div>
+        </div>
+        <div class="field">
+          <label>Fornitore (col Z)</label>
+          <input type="text" id="fornitore" value="ENESCO FRANCE" />
+        </div>
+        <div class="field">
+          <label>Produttore (col Q)</label>
+          <input type="text" id="produttore" value="ENESCO" />
+        </div>
+        <div class="field">
+          <label>Codice IVA (col G)</label>
+          <input type="text" id="codIva" value="22" style="max-width:90px" />
+        </div>
+        <div class="field">
+          <label>Prezzi nel PDF</label>
+          <div class="tog-row">
+            <label class="tog">
+              <input type="checkbox" id="prezziIvati" />
+              <span class="slider"></span>
+            </label>
+            <span class="tog-lbl" id="togLbl">Esclusi IVA (verrà applicato ×1.22)</span>
+          </div>
+          <div class="hint">Attiva se i prezzi della bolla includono già l'IVA.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Upload ── -->
+  <div class="card">
+    <div class="card-hd">
+      <h2>
+        <svg viewBox="0 0 24 24" fill="var(--gray-400)"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8 13h8v1.5H8V13zm0 3h5v1.5H8V16zm0-6h2v1.5H8V10z"/></svg>
+        Carica Bolla PDF
+      </h2>
+    </div>
+    <div class="card-bd">
+      <div id="drop"
+           ondragover="ev(event,'over')" ondragleave="ev(event,'leave')" ondrop="ev(event,'drop')">
+        <input type="file" accept=".pdf" id="fileIn" onchange="pickFile(this.files[0])" />
+        <div class="dico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+          </svg>
+        </div>
+        <div class="dtitle" id="dtitle">Trascina qui la bolla PDF</div>
+        <div class="dsub">oppure clicca per scegliere</div>
+        <div id="fname"></div>
+      </div>
+
+      <button id="btnConvert" disabled onclick="runConvert()">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+        Converti in Excel Danea
+      </button>
+    </div>
+
+    <div id="status"></div>
+  </div>
+
+</main>
+
+<footer>Bolla PDF → Danea Excel · Powered by Claude AI · Formato Danea Easyfatt · Standalone HTML</footer>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+const DANEA_HEADERS = [
+  "Cod.", "Descrizione", "Tipologia", "Categoria", "Sottocategoria",
+  "Cod. Udm", "Cod. Iva", "Listino 1 (ivato)", "Listino 2 (ivato)", "Listino 3 (ivato)",
+  "Formula listino 1", "Formula listino 2", "Formula listino 3", "Note", "Cod. a barre",
+  "Internet", "Produttore", "Descriz. web (Sorgente HTML)", "E-commerce", "Vendita Touch",
+  "Extra 1", "Extra 2", "Extra 3", "Extra 4", "Cod. fornitore",
+  "Fornitore", "Cod. prod. forn.", "Prezzo forn. (ivato)", "Note fornitura", "Ord. a multipli di",
+  "Gg. ordine", "Scorta min.", "Ubicazione", "Tot. qtà caricata", "Tot. qtà scaricata",
+  "Q.tà giacenza", "Q.tà impegnata", "Q.tà disponibile", "Q.tà in arrivo", "Vendita media mensile",
+  "Stima data fine magazz.", "Stima data prossimo ordine", "Data primo carico", "Data ultimo carico",
+  "Data ultimo scarico", "Costo medio d'acq.", "Ultimo costo d'acq.", "Prezzo medio vend.",
+  "Stato magazzino", "Immagine"
+];
+
+// Column widths (character units, from reference file)
+const COL_WPCH = [
+  5.5, 11.66, 9.5, 9.83, 14.16, 10.0, 8.5, 15.0, 8, 8,
+  16.16, 8, 8, 5.5, 12.0, 8.16, 10.83, 27.66, 12.33, 13.83,
+  7.5, 8, 8, 8, 13.66, 9.5, 15.16, 18.16, 13.66, 16.16,
+  10.5, 11.5, 11.0, 16.0, 17.0, 13.16, 14.5, 15.16, 12.83, 21.0,
+  22.16, 25.33, 16.83, 17.33, 18.16, 18.0, 18.16, 18.5, 15.83, 9.83
+];
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let file = null, lastWb = null, lastFilename = 'Danea_export.xlsx';
+
+// ═══════════════════════════════════════════
+// PERSIST SETTINGS
+// ═══════════════════════════════════════════
+const SKEYS = ['apiKey','fornitore','produttore','codIva'];
+SKEYS.forEach(k => {
+  const el = document.getElementById(k);
+  const v  = localStorage.getItem('dc_'+k);
+  if (v) el.value = v;
+  el.addEventListener('input', () => localStorage.setItem('dc_'+k, el.value));
+});
+const piEl = document.getElementById('prezziIvati');
+if (localStorage.getItem('dc_pi') === '1') piEl.checked = true;
+piEl.addEventListener('change', () => {
+  localStorage.setItem('dc_pi', piEl.checked ? '1' : '0');
+  document.getElementById('togLbl').textContent =
+    piEl.checked ? 'Inclusi IVA' : 'Esclusi IVA (verrà applicato ×1.22)';
+});
+
+// ═══════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════
+function toggleSett() {
+  const b = document.getElementById('settBody');
+  const btn = document.getElementById('settBtn');
+  const open = b.style.display === 'none';
+  b.style.display = open ? '' : 'none';
+  btn.textContent = open ? 'Nascondi' : 'Mostra';
+  btn.classList.toggle('open', open);
+  btn.insertAdjacentHTML('beforeend',
+    `<svg viewBox="0 0 24 24" fill="currentColor" style="width:13px;height:13px${open?';transform:rotate(180deg)':''}"><path d="M7 10l5 5 5-5z"/></svg>`);
+}
+
+function ev(e, type) {
+  e.preventDefault();
+  const d = document.getElementById('drop');
+  if (type === 'over')  d.classList.add('over');
+  if (type === 'leave') d.classList.remove('over');
+  if (type === 'drop') {
+    d.classList.remove('over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type === 'application/pdf') pickFile(f);
+    else setErr('Il file deve essere un PDF (.pdf)');
+  }
+}
+
+function pickFile(f) {
+  if (!f) return;
+  file = f;
+  const d = document.getElementById('drop');
+  d.classList.add('ok');
+  document.getElementById('dtitle').textContent = 'File selezionato';
+  document.getElementById('fname').textContent  = f.name;
+  document.getElementById('btnConvert').disabled = false;
+  clearStatus();
+}
+
+function clearStatus() {
+  const s = document.getElementById('status');
+  s.style.display = 'none'; s.innerHTML = '';
+}
+
+let _prog = 0;
+function setSpinner(msg, prog) {
+  _prog = prog ?? _prog;
+  const s = document.getElementById('status');
+  s.style.display = '';
+  let existing = s.querySelector('.spin-wrap');
+  if (!existing) {
+    s.innerHTML = `
+      <div class="spin-wrap">
+        <div class="ring"></div>
+        <div class="spin-txt">
+          <strong>Elaborazione…</strong>
+          <span id="spinMsg">${msg}</span>
+        </div>
+      </div>
+      <div class="prog-bar"><div class="prog-inner" id="progInner" style="width:${_prog}%"></div></div>`;
+  } else {
+    document.getElementById('spinMsg').textContent = msg;
+    document.getElementById('progInner').style.width = _prog + '%';
+  }
+}
+
+function setErr(msg) {
+  const s = document.getElementById('status');
+  s.style.display = '';
+  s.innerHTML = `
+    <div class="err">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      <div class="err-txt"><strong>Errore</strong>${msg}</div>
+    </div>`;
+  document.getElementById('btnConvert').disabled = false;
+}
+
+// ═══════════════════════════════════════════
+// PDF TEXT EXTRACTION (pdf.js)
+// ═══════════════════════════════════════════
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+async function extractPdfText(f) {
+  const buf = await f.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let out = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page    = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    // Group items by approximate Y position to reconstruct rows
+    const rows = {};
+    content.items.forEach(item => {
+      const y = Math.round(item.transform[5]);
+      if (!rows[y]) rows[y] = [];
+      rows[y].push({ x: item.transform[4], str: item.str });
+    });
+    // Sort rows top-to-bottom, items left-to-right
+    Object.keys(rows)
+      .map(Number)
+      .sort((a, b) => b - a)
+      .forEach(y => {
+        const line = rows[y]
+          .sort((a, b) => a.x - b.x)
+          .map(i => i.str)
+          .join(' ');
+        out += line + '\n';
+      });
+    out += '\n--- PAGINA ' + p + ' ---\n\n';
+  }
+  return out;
+}
+
+// ═══════════════════════════════════════════
+// CLAUDE API CALL
+// ═══════════════════════════════════════════
+async function callClaude(text, apiKey, fornitore, produttore, iva, ivati) {
+  const nota = ivati
+    ? 'I prezzi nel documento includono già l\'IVA.'
+    : `I prezzi sono ESCLUSI IVA (${iva}%). Moltiplicali per ${(1 + parseInt(iva) / 100).toFixed(2)} per ottenere il prezzo ivato.`;
+
+  const prompt = `Analizza questo testo estratto da una bolla di consegna fornitore italiano.
+${nota}
+
+Restituisci SOLO un array JSON (nessun testo extra). Ogni elemento:
+{
+  "cod": "codice articolo",
+  "descrizione": "descrizione",
+  "ean": "barcode EAN o null",
+  "quantita": numero_intero,
+  "prezzo_fornitore_ivato": prezzo_acquisto_con_iva_float,
+  "prezzo_listino_ivato": prezzo_listino_con_iva_float_o_null
+}
+
+Regole:
+- Conserva gli zeri iniziali nei codici EAN
+- Se ci sono sconti applicali prima di restituire il prezzo
+- Quantità = intero, prezzi = float 2 decimali
+
+TESTO BOLLA:
+${text}
+
+Rispondi SOLO con l'array JSON.`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-5',
+      max_tokens: 8192,
+      system: 'Sei un esperto nell\'estrarre dati da bolle di consegna italiane. Rispondi SOLO con JSON valido.',
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    if (res.status === 401) throw new Error('API Key non valida. Controlla nelle impostazioni.');
+    throw new Error(err.error?.message || `Errore API (${res.status})`);
+  }
+
+  const data = await res.json();
+  let raw = data.content[0].text.trim();
+  raw = raw.replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'');
+  return JSON.parse(raw);
+}
+
+// ═══════════════════════════════════════════
+// EXCEL GENERATION (xlsx-js-style)
+// ═══════════════════════════════════════════
+function buildDaneaExcel(products, fornitore, produttore, iva) {
+  const wb = XLSX.utils.book_new();
+  const ws = {};
+
+  const LIGHT_BLUE = 'DCE6F1';
+
+  const headerStyle = {
+    font:      { name: 'Arial', bold: true, sz: 10 },
+    alignment: { horizontal: 'left', vertical: 'center' },
+    fill:      { patternType: 'none' },
+  };
+
+  // Row 1 — headers
+  DANEA_HEADERS.forEach((h, ci) => {
+    const ref = XLSX.utils.encode_cell({ r: 0, c: ci });
+    ws[ref] = { v: h, t: 's', s: headerStyle };
+  });
+
+  // Data rows
+  products.forEach((p, ri) => {
+    const rowIdx = ri + 1; // 0-indexed, row 1 = second row
+    const isBlue = (rowIdx % 2 === 1); // rows 2,4,6… = blue (ri=1,3,5…)
+    const fill   = isBlue
+      ? { patternType: 'solid', fgColor: { rgb: LIGHT_BLUE } }
+      : { patternType: 'solid', fgColor: { rgb: 'FFFFFF' } };
+
+    const dataStyle = {
+      font:      { name: 'Arial', bold: false, sz: 10 },
+      alignment: { horizontal: 'left', vertical: 'center' },
+      fill,
+    };
+
+    const cod  = String(p.cod  ?? '').trim();
+    const row  = new Array(50).fill(null);
+
+    row[0]  = cod;                                     // A  Cod.
+    row[1]  = String(p.descrizione ?? '').trim();      // B  Descrizione
+    row[6]  = iva;                                     // G  Cod. Iva
+    if (p.prezzo_listino_ivato != null)
+      row[7]  = Math.round(+p.prezzo_listino_ivato * 100) / 100; // H  Listino 1
+    if (p.ean)
+      row[14] = String(p.ean).trim();                  // O  Cod. a barre
+    row[16] = produttore;                              // Q  Produttore
+    row[25] = fornitore;                               // Z  Fornitore
+    row[26] = cod;                                     // AA Cod. prod. forn.
+    if (p.prezzo_fornitore_ivato != null)
+      row[27] = Math.round(+p.prezzo_fornitore_ivato * 100) / 100; // AB Prezzo forn.
+    const qty = parseInt(p.quantita ?? 1, 10);
+    row[35] = qty;                                     // AJ Q.tà giacenza
+    row[37] = qty;                                     // AL Q.tà disponibile
+
+    row.forEach((val, ci) => {
+      const ref = XLSX.utils.encode_cell({ r: rowIdx, c: ci });
+      const t   = typeof val === 'number' ? 'n' : 's';
+      ws[ref]   = { v: val ?? '', t, s: dataStyle };
+    });
+  });
+
+  // Sheet range
+  ws['!ref'] = XLSX.utils.encode_range({
+    s: { r: 0, c: 0 },
+    e: { r: products.length, c: 49 }
+  });
+
+  // Column widths
+  ws['!cols'] = COL_WPCH.map(w => ({ wch: w }));
+
+  // Row heights
+  ws['!rows'] = Array(products.length + 1).fill({ hpt: 15 });
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Foglio1');
+  return wb;
+}
+
+// ═══════════════════════════════════════════
+// MAIN CONVERT FLOW
+// ═══════════════════════════════════════════
+async function runConvert() {
+  if (!file) return;
+
+  const apiKey    = document.getElementById('apiKey').value.trim();
+  const fornitore = document.getElementById('fornitore').value.trim() || 'ENESCO FRANCE';
+  const produttore= document.getElementById('produttore').value.trim() || 'ENESCO';
+  const iva       = document.getElementById('codIva').value.trim() || '22';
+  const ivati     = document.getElementById('prezziIvati').checked;
+
+  if (!apiKey) {
+    if (document.getElementById('settBody').style.display === 'none') toggleSett();
+    document.getElementById('apiKey').focus();
+    setErr('Inserisci la tua API Key Anthropic nelle impostazioni (in alto).');
+    return;
+  }
+
+  document.getElementById('btnConvert').disabled = true;
+  clearStatus();
+
+  try {
+    // Step 1
+    setSpinner('Lettura del PDF in corso…', 10);
+    const pdfText = await extractPdfText(file);
+    if (!pdfText.trim()) throw new Error('Impossibile estrarre testo dal PDF. Prova un PDF non scansionato (OCR).');
+
+    // Step 2
+    setSpinner('Analisi AI in corso (Claude)…', 40);
+    const products = await callClaude(pdfText, apiKey, fornitore, produttore, iva, ivati);
+    if (!Array.isArray(products) || products.length === 0)
+      throw new Error('Nessun prodotto trovato nel PDF. Verifica che il file sia una bolla fornitore.');
+
+    // Step 3
+    setSpinner('Generazione Excel Danea…', 80);
+    const wb = buildDaneaExcel(products, fornitore, produttore, iva);
+    lastWb = wb;
+
+    const baseName = file.name.replace(/\.pdf$/i, '');
+    lastFilename = `Danea_${baseName}.xlsx`;
+
+    setSpinner('Completato!', 100);
+    await new Promise(r => setTimeout(r, 400));
+
+    showSuccess(products, lastFilename);
+
+  } catch (err) {
+    setErr(err.message || String(err));
+  }
+}
+
+// ═══════════════════════════════════════════
+// SUCCESS UI
+// ═══════════════════════════════════════════
+function showSuccess(products, filename) {
+  const prev = products.slice(0, 5).map(p => `
+    <tr>
+      <td title="${p.cod}">${p.cod||''}</td>
+      <td title="${p.descrizione}">${p.descrizione||''}</td>
+      <td>${p.ean||'—'}</td>
+      <td style="text-align:right">${p.quantita||1}</td>
+      <td style="text-align:right">${p.prezzo_fornitore_ivato!=null ? '€ '+Number(p.prezzo_fornitore_ivato).toFixed(2) : '—'}</td>
+      <td style="text-align:right">${p.prezzo_listino_ivato!=null ? '€ '+Number(p.prezzo_listino_ivato).toFixed(2) : '—'}</td>
+    </tr>`).join('');
+
+  const s = document.getElementById('status');
+  s.style.display = '';
+  s.innerHTML = `
+    <div class="succ">
+      <div class="succ-top">
+        <div class="chk">
+          <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        </div>
+        <div>
+          <div class="succ-ttl">Conversione completata!</div>
+          <div class="succ-sub">${products.length} prodotti estratti · pronto per importazione Danea Easyfatt</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="prev-lbl">Anteprima (prime 5 righe su ${products.length})</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Codice</th><th>Descrizione</th><th>EAN</th>
+                <th>Q.tà</th><th>Prezzo forn.</th><th>Listino</th>
+              </tr>
+            </thead>
+            <tbody>${prev}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <button id="btnDl" onclick="doDownload()">
+        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5v-2z"/></svg>
+        Scarica ${filename}
+      </button>
+      <button id="btnReset" onclick="doReset()">↩ Converti un altro file</button>
+    </div>`;
+}
+
+function doDownload() {
+  if (!lastWb) return;
+  XLSX.writeFile(lastWb, lastFilename);
+}
+
+function doReset() {
+  file = null; lastWb = null;
+  const d = document.getElementById('drop');
+  d.classList.remove('ok');
+  document.getElementById('dtitle').textContent = 'Trascina qui la bolla PDF';
+  document.getElementById('fname').textContent  = '';
+  document.getElementById('fileIn').value       = '';
+  document.getElementById('btnConvert').disabled = true;
+  clearStatus();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bolla PDF → Danea Excel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:      #2563EB;
+      --blue-dark: #1D4ED8;
+      --blue-light:#EFF6FF;
+      --green:     #16A34A;
+      --green-bg:  #F0FDF4;
+      --red:       #DC2626;
+      --red-bg:    #FEF2F2;
+      --gray-50:   #F8FAFC;
+      --gray-100:  #F1F5F9;
+      --gray-200:  #E2E8F0;
+      --gray-400:  #94A3B8;
+      --gray-600:  #475569;
+      --gray-700:  #334155;
+      --gray-900:  #0F172A;
+      --radius:    12px;
+      --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #fff;
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: var(--blue);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-icon svg { width: 20px; height: 20px; fill: #fff; }
+    header h1 { font-size: 1.1rem; font-weight: 700; color: var(--gray-900); }
+    header span { font-size: .8rem; color: var(--gray-400); margin-left: 4px; font-weight: 400; }
+
+    /* ── Main ── */
+    main {
+      flex: 1;
+      max-width: 760px;
+      width: 100%;
+      margin: 40px auto;
+      padding: 0 16px 60px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .card-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-header h2 { font-size: .9rem; font-weight: 600; color: var(--gray-700); display: flex; align-items: center; gap: 8px; }
+    .card-header h2 svg { width: 16px; height: 16px; opacity: .6; }
+    .card-body { padding: 24px; }
+
+    /* ── Settings ── */
+    .settings-toggle {
+      font-size: .78rem; color: var(--blue); cursor: pointer; font-weight: 500;
+      background: none; border: none; display: flex; align-items: center; gap: 4px;
+    }
+    .settings-toggle svg { width: 14px; height: 14px; transition: transform .2s; }
+    .settings-toggle.open svg { transform: rotate(180deg); }
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width:520px) { .settings-grid { grid-template-columns: 1fr; } }
+
+    /* ── Form elements ── */
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: .78rem; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: .04em; }
+
+    input[type="text"], input[type="password"] {
+      padding: 9px 12px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: .9rem;
+      font-family: inherit;
+      color: var(--gray-900);
+      transition: border-color .15s;
+      background: #fff;
+    }
+    input:focus { outline: none; border-color: var(--blue); }
+
+    .hint { font-size: .72rem; color: var(--gray-400); margin-top: 2px; }
+
+    /* toggle switch */
+    .toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+    .toggle { position: relative; width: 40px; height: 22px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0;
+      background: var(--gray-200); border-radius: 99px; cursor: pointer;
+      transition: background .2s;
+    }
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 16px; height: 16px;
+      left: 3px; top: 3px;
+      background: #fff; border-radius: 50%;
+      transition: transform .2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .toggle input:checked + .slider { background: var(--blue); }
+    .toggle input:checked + .slider::before { transform: translateX(18px); }
+    .toggle-label { font-size: .85rem; color: var(--gray-700); }
+
+    /* ── Drop Zone ── */
+    #drop-zone {
+      border: 2px dashed var(--gray-200);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    #drop-zone:hover, #drop-zone.over { border-color: var(--blue); background: var(--blue-light); }
+    #drop-zone.has-file { border-style: solid; border-color: var(--blue); background: var(--blue-light); }
+    #drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .drop-icon { margin-bottom: 12px; }
+    .drop-icon svg { width: 48px; height: 48px; color: var(--gray-400); }
+    #drop-zone.has-file .drop-icon svg { color: var(--blue); }
+    .drop-title { font-size: 1rem; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
+    .drop-sub   { font-size: .82rem; color: var(--gray-400); }
+    #file-name  { font-size: .85rem; font-weight: 600; color: var(--blue); margin-top: 8px; }
+
+    /* ── Convert Button ── */
+    #btn-convert {
+      width: 100%; padding: 14px;
+      background: var(--blue);
+      color: #fff; border: none; border-radius: 10px;
+      font-size: 1rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: background .15s, opacity .15s;
+      margin-top: 16px;
+    }
+    #btn-convert:hover:not(:disabled) { background: var(--blue-dark); }
+    #btn-convert:disabled { opacity: .5; cursor: not-allowed; }
+    #btn-convert svg { width: 18px; height: 18px; fill: #fff; }
+
+    /* ── Status ── */
+    #status-box { display: none; padding: 20px 24px; }
+
+    /* spinner */
+    .spinner {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .spinner-ring {
+      width: 32px; height: 32px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner-text { font-size: .9rem; color: var(--gray-700); }
+    .spinner-text strong { display: block; font-size: 1rem; color: var(--gray-900); margin-bottom: 2px; }
+
+    /* success */
+    .success-box {
+      background: var(--green-bg);
+      border: 1.5px solid #BBF7D0;
+      border-radius: 10px;
+      padding: 20px 24px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .success-top { display: flex; align-items: center; gap: 12px; }
+    .check-icon {
+      width: 40px; height: 40px; background: var(--green); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .check-icon svg { width: 20px; height: 20px; fill: #fff; }
+    .success-title { font-size: 1rem; font-weight: 700; color: var(--green); }
+    .success-sub   { font-size: .82rem; color: var(--gray-600); }
+
+    /* preview table */
+    .preview-label { font-size: .75rem; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+    .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--gray-200); }
+    table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    th { background: var(--gray-100); color: var(--gray-600); font-weight: 600; padding: 8px 10px; text-align: left; white-space: nowrap; }
+    td { padding: 7px 10px; color: var(--gray-700); border-top: 1px solid var(--gray-200); white-space: nowrap; }
+    tr:nth-child(even) td { background: #f8fafc; }
+
+    /* download button */
+    #btn-download {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 24px;
+      background: var(--green);
+      color: #fff; border: none; border-radius: 10px;
+      font-size: .95rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; text-decoration: none;
+      transition: background .15s;
+      width: 100%;
+    }
+    #btn-download:hover { background: #15803D; }
+    #btn-download svg { width: 18px; height: 18px; fill: #fff; }
+
+    /* error */
+    .error-box {
+      background: var(--red-bg);
+      border: 1.5px solid #FECACA;
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .error-box svg { width: 20px; height: 20px; fill: var(--red); flex-shrink: 0; margin-top: 1px; }
+    .error-text { font-size: .88rem; color: var(--red); line-height: 1.5; }
+    .error-text strong { display: block; font-size: .95rem; margin-bottom: 4px; }
+
+    /* reset button */
+    #btn-reset {
+      background: none; border: 1.5px solid var(--gray-200);
+      padding: 8px 16px; border-radius: 8px;
+      font-size: .82rem; font-weight: 600; color: var(--gray-600); cursor: pointer;
+      font-family: inherit; transition: border-color .15s, color .15s;
+    }
+    #btn-reset:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* ── Footer ── */
+    footer { text-align: center; padding: 24px; font-size: .75rem; color: var(--gray-400); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM9 13h6v1.5H9V13zm0 3h4v1.5H9V16zm0-6h2v1.5H9V10z"/></svg>
+  </div>
+  <h1>Bolla PDF → Danea <span>Excel Converter</span></h1>
+</header>
+
+<main>
+
+  <!-- ── Settings Card ── -->
+  <div class="card">
+    <div class="card-header">
+      <h2>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15a3 3 0 100-6 3 3 0 000 6zm8.94-3.44a7.03 7.03 0 00.06-.56 7.03 7.03 0 00-.06-.56l1.7-1.33a.4.4 0 00.1-.52l-1.62-2.8a.4.4 0 00-.49-.17l-2 .8a6.9 6.9 0 00-.97-.56l-.3-2.13A.4.4 0 0017 4h-3.25a.4.4 0 00-.4.34l-.3 2.13a6.9 6.9 0 00-.97.56l-2-.8a.4.4 0 00-.5.17L8 9.2a.4.4 0 00.1.52l1.7 1.33a7.12 7.12 0 000 1.12L8.1 13.5a.4.4 0 00-.1.52l1.62 2.8c.1.18.32.24.5.17l2-.8c.3.2.63.4.97.56l.3 2.13c.06.2.23.34.4.34H17c.2 0 .36-.14.39-.34l.3-2.13a6.9 6.9 0 00.97-.56l2 .8c.18.07.4 0 .5-.17l1.62-2.8a.4.4 0 00-.1-.52l-1.74-1.38z"/></svg>
+        Impostazioni
+      </h2>
+      <button class="settings-toggle" id="settings-toggle" onclick="toggleSettings()">
+        Mostra
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+      </button>
+    </div>
+    <div class="card-body" id="settings-body" style="display:none">
+      <div class="settings-grid">
+
+        <div class="field full">
+          <label>🔑 API Key Anthropic</label>
+          <input type="password" id="api-key" placeholder="sk-ant-api03-..." autocomplete="off" />
+          <div class="hint">Necessaria per l'analisi AI del PDF. Non viene salvata sul server. <a href="https://console.anthropic.com/" target="_blank" style="color:var(--blue)">Ottieni una chiave →</a></div>
+        </div>
+
+        <div class="field">
+          <label>Fornitore (Danea col Z)</label>
+          <input type="text" id="fornitore" value="ENESCO FRANCE" />
+        </div>
+
+        <div class="field">
+          <label>Produttore (Danea col Q)</label>
+          <input type="text" id="produttore" value="ENESCO" />
+        </div>
+
+        <div class="field">
+          <label>Codice IVA (Danea col G)</label>
+          <input type="text" id="cod-iva" value="22" style="max-width:100px" />
+        </div>
+
+        <div class="field">
+          <label>Prezzi nel PDF</label>
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" id="prezzi-ivati" />
+              <span class="slider"></span>
+            </label>
+            <span class="toggle-label" id="toggle-label">Esclusi IVA (×1.22)</span>
+          </div>
+          <div class="hint">Attiva se i prezzi nella bolla includono già l'IVA.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Upload Card ── -->
+  <div class="card">
+    <div class="card-header">
+      <h2>
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5z"/></svg>
+        Carica Bolla PDF
+      </h2>
+    </div>
+    <div class="card-body">
+      <div id="drop-zone"
+           ondragover="onDragOver(event)"
+           ondragleave="onDragLeave(event)"
+           ondrop="onDrop(event)">
+        <input type="file" id="file-input" accept=".pdf" onchange="onFileChange(event)" />
+        <div class="drop-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+        </div>
+        <div class="drop-title" id="drop-title">Trascina qui la bolla PDF</div>
+        <div class="drop-sub">oppure clicca per scegliere un file</div>
+        <div id="file-name"></div>
+      </div>
+
+      <button id="btn-convert" disabled onclick="startConvert()">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+        Converti in Excel Danea
+      </button>
+    </div>
+
+    <!-- Status area (shared for spinner / success / error) -->
+    <div id="status-box">
+      <!-- filled dynamically -->
+    </div>
+  </div>
+
+</main>
+
+<footer>Bolla PDF → Danea Excel Converter · powered by Claude AI · formato Danea Easyfatt</footer>
+
+<script>
+  // ── State
+  let selectedFile = null;
+  let lastResult   = null;
+
+  // ── Persist settings
+  const KEYS = ['api-key','fornitore','produttore','cod-iva'];
+  KEYS.forEach(k => {
+    const el = document.getElementById(k);
+    const saved = localStorage.getItem('dc_' + k);
+    if (saved) el.value = saved;
+    el.addEventListener('input', () => localStorage.setItem('dc_' + k, el.value));
+  });
+  const piEl = document.getElementById('prezzi-ivati');
+  if (localStorage.getItem('dc_prezzi-ivati') === '1') piEl.checked = true;
+  piEl.addEventListener('change', () => {
+    localStorage.setItem('dc_prezzi-ivati', piEl.checked ? '1' : '0');
+    document.getElementById('toggle-label').textContent =
+      piEl.checked ? 'Inclusi IVA' : 'Esclusi IVA (×1.22)';
+  });
+
+  // ── Settings toggle
+  function toggleSettings() {
+    const body = document.getElementById('settings-body');
+    const btn  = document.getElementById('settings-toggle');
+    const open = body.style.display === 'none';
+    body.style.display = open ? '' : 'none';
+    btn.textContent = open ? 'Nascondi' : 'Mostra';
+    btn.classList.toggle('open', open);
+    btn.appendChild(Object.assign(document.createElementNS('http://www.w3.org/2000/svg','svg'),{}));
+    // rebuild chevron
+    btn.innerHTML = (open ? 'Nascondi' : 'Mostra') +
+      `<svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;${open?'transform:rotate(180deg)':''}"><path d="M7 10l5 5 5-5z"/></svg>`;
+  }
+
+  // ── Drag and drop
+  function onDragOver(e)  { e.preventDefault(); document.getElementById('drop-zone').classList.add('over'); }
+  function onDragLeave()  { document.getElementById('drop-zone').classList.remove('over'); }
+  function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.remove('over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type === 'application/pdf') setFile(f);
+    else showError('Il file deve essere un PDF.');
+  }
+  function onFileChange(e) {
+    const f = e.target.files[0];
+    if (f) setFile(f);
+  }
+  function setFile(f) {
+    selectedFile = f;
+    const dz = document.getElementById('drop-zone');
+    dz.classList.add('has-file');
+    document.getElementById('drop-title').textContent = 'File selezionato';
+    document.getElementById('file-name').textContent  = f.name;
+    document.getElementById('btn-convert').disabled = false;
+    clearStatus();
+  }
+
+  // ── Convert
+  async function startConvert() {
+    if (!selectedFile) return;
+
+    const apiKey = document.getElementById('api-key').value.trim();
+    if (!apiKey) {
+      showSettings();
+      alert('Inserisci la tua API Key Anthropic nelle impostazioni.');
+      return;
+    }
+
+    document.getElementById('btn-convert').disabled = true;
+    showSpinner('Estrazione testo dal PDF…');
+
+    const fd = new FormData();
+    fd.append('file',         selectedFile);
+    fd.append('api_key',      apiKey);
+    fd.append('fornitore',    document.getElementById('fornitore').value);
+    fd.append('produttore',   document.getElementById('produttore').value);
+    fd.append('cod_iva',      document.getElementById('cod-iva').value);
+    fd.append('prezzi_ivati', document.getElementById('prezzi-ivati').checked ? 'true' : 'false');
+
+    // fake progress steps
+    let step = 0;
+    const steps = ['Estrazione testo dal PDF…','Analisi AI in corso…','Generazione Excel Danea…'];
+    const ticker = setInterval(() => { step = Math.min(step+1, steps.length-1); updateSpinner(steps[step]); }, 4000);
+
+    try {
+      const res  = await fetch('/convert', { method:'POST', body: fd });
+      const data = await res.json();
+      clearInterval(ticker);
+
+      if (!res.ok) throw new Error(data.detail || 'Errore sconosciuto');
+
+      lastResult = data;
+      showSuccess(data);
+    } catch(err) {
+      clearInterval(ticker);
+      showError(err.message);
+      document.getElementById('btn-convert').disabled = false;
+    }
+  }
+
+  // ── Download
+  function doDownload() {
+    if (!lastResult) return;
+    const url = `/download/${lastResult.file_id}?filename=${encodeURIComponent(lastResult.filename.replace('.xlsx',''))}`;
+    const a   = document.createElement('a');
+    a.href = url; a.download = lastResult.filename;
+    a.click();
+  }
+
+  // ── UI helpers
+  function clearStatus() {
+    const sb = document.getElementById('status-box');
+    sb.style.display = 'none';
+    sb.innerHTML = '';
+  }
+
+  function showSpinner(msg) {
+    const sb = document.getElementById('status-box');
+    sb.style.display = '';
+    sb.innerHTML = `
+      <div class="spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-text">
+          <strong>Elaborazione in corso…</strong>
+          <span id="spinner-msg">${msg}</span>
+        </div>
+      </div>`;
+  }
+  function updateSpinner(msg) {
+    const el = document.getElementById('spinner-msg');
+    if (el) el.textContent = msg;
+  }
+
+  function showSuccess(data) {
+    const preview = (data.preview || []).map(p => `
+      <tr>
+        <td>${p.cod||''}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${p.descrizione||''}</td>
+        <td>${p.ean||'—'}</td>
+        <td style="text-align:right">${p.quantita||''}</td>
+        <td style="text-align:right">${p.prezzo_fornitore_ivato!=null ? '€ '+Number(p.prezzo_fornitore_ivato).toFixed(2) : '—'}</td>
+        <td style="text-align:right">${p.prezzo_listino_ivato!=null ? '€ '+Number(p.prezzo_listino_ivato).toFixed(2) : '—'}</td>
+      </tr>`).join('');
+
+    const sb = document.getElementById('status-box');
+    sb.style.display = '';
+    sb.innerHTML = `
+      <div class="success-box">
+        <div class="success-top">
+          <div class="check-icon">
+            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          </div>
+          <div>
+            <div class="success-title">Conversione completata!</div>
+            <div class="success-sub">${data.prodotti} prodotti estratti → pronto per Danea Easyfatt</div>
+          </div>
+        </div>
+
+        ${preview ? `
+        <div>
+          <div class="preview-label">Anteprima (prime 5 righe)</div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Codice</th><th>Descrizione</th><th>EAN</th>
+                  <th>Q.tà</th><th>Prezzo forn.</th><th>Listino</th>
+                </tr>
+              </thead>
+              <tbody>${preview}</tbody>
+            </table>
+          </div>
+        </div>` : ''}
+
+        <button id="btn-download" onclick="doDownload()">
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5v-2z"/></svg>
+          Scarica Excel Danea (${data.filename})
+        </button>
+
+        <button id="btn-reset" onclick="resetApp()">↩ Converti un altro file</button>
+      </div>`;
+  }
+
+  function showError(msg) {
+    const sb = document.getElementById('status-box');
+    sb.style.display = '';
+    sb.innerHTML = `
+      <div class="error-box">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <div class="error-text">
+          <strong>Errore durante la conversione</strong>
+          ${msg}
+        </div>
+      </div>`;
+  }
+
+  function showSettings() {
+    const body = document.getElementById('settings-body');
+    if (body.style.display === 'none') toggleSettings();
+  }
+
+  function resetApp() {
+    selectedFile = null;
+    lastResult   = null;
+    const dz = document.getElementById('drop-zone');
+    dz.classList.remove('has-file');
+    document.getElementById('drop-title').textContent = 'Trascina qui la bolla PDF';
+    document.getElementById('file-name').textContent  = '';
+    document.getElementById('file-input').value       = '';
+    document.getElementById('btn-convert').disabled   = true;
+    clearStatus();
+  }
+</script>
+</body>
+</html>

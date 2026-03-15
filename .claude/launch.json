@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "danea-converter",
+      "runtimeExecutable": "C:\\Program Files\\Git\\usr\\bin\\perl.exe",
+      "runtimeArgs": ["C:\\Users\\valer\\Downloads\\App-Gith\\serve.pl"],
+      "port": 7777
+    }
+  ]
+}
